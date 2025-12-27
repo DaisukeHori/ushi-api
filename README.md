@@ -1,53 +1,115 @@
-# 日本牛個体識別番号検索API (Supabase Edge Functions)
+# 🐄 日本牛個体識別番号検索 API (ushi-api)
 
-このプロジェクトは、日本の牛の個体識別番号から履歴情報を取得するAPIサービスです。
-既存のR言語による実装を分析し、TypeScript (Deno) で再実装しました。
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)](https://supabase.com/)
 
-## 構成
+日本の家畜改良センター（NLBC）が提供する「牛の個体識別情報検索サービス」をラップし、個体識別番号から牛の履歴情報をJSON形式で取得できるAPIサービスです。
 
-- `docs/design.md`: 要件定義・設計書
-- `supabase/functions/cattle-search/index.ts`: API本体 (Supabase Edge Function)
-- `test_node.js`: ローカル検証用Node.jsスクリプト
+既存のR言語による実装をベースに、モダンなTypeScript環境で再構築されました。
 
-## 使い方
+## ✨ 特徴
 
-### ローカルでの検証 (Node.js)
+- **JSONレスポンス**: スクレイピングしたHTMLを構造化されたJSON形式で返却します。
+- **セッション管理**: 同意ページから検索ページまでの複雑なセッションとCSRFトークンを自動で処理します。
+- **バリデーション**: 9〜10桁の個体識別番号を適切にバリデーションし、必要に応じて0埋めを行います。
+- **マルチプラットフォーム**: Supabase Edge Functions (Deno) と Node.js (Express) の両方で動作します。
 
-1. 依存関係のインストール:
-   ```bash
-   npm install axios cheerio
-   ```
+## 🛠 技術スタック
 
-2. スクリプトの実行:
-   ```bash
-   node test_node.js [個体識別番号]
-   ```
-   例: `node test_node.js 1083079037`
+- **Language**: TypeScript
+- **Runtime**: Deno (Supabase Edge Functions) / Node.js
+- **Libraries**:
+  - `cheerio`: HTMLパース
+  - `axios`: HTTPクライアント (Node.js)
+  - `express`: ローカルサーバー (Node.js)
 
-### Supabase Edge Functions へのデプロイ
+## 🚀 クイックスタート (ローカル環境)
 
-1. Supabase CLIがインストールされていることを確認してください。
-2. プロジェクトを初期化 (済):
-   ```bash
-   supabase init
-   ```
-3. デプロイ:
-   ```bash
-   supabase functions deploy cattle-search
-   ```
+### 1. 依存関係のインストール
 
-### APIの使用方法
+```bash
+npm install
+```
 
-- **Endpoint**: `POST /functions/v1/cattle-search`
-- **Body**:
-  ```json
-  {
-    "id": "1083079037"
+### 2. ローカルサーバーの起動
+
+```bash
+npm start
+```
+
+サーバーが `http://localhost:3000` で起動します。
+
+### 3. APIのテスト
+
+別のターミナルから `curl` でリクエストを送信します。
+
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"id": "1400786426"}' http://localhost:3000/search
+```
+
+## 📖 API 仕様
+
+### 個体識別番号検索
+
+- **URL**: `/search`
+- **Method**: `POST`
+- **Content-Type**: `application/json`
+
+#### リクエストボディ
+
+| パラメータ | 型 | 必須 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` | ✅ | 10桁（または9桁）の個体識別番号 |
+
+#### レスポンス (成功時)
+
+```json
+{
+  "status": "success",
+  "data": {
+    "cattleInfo": {
+      "individualId": "1400786426",
+      "birthDate": "2023.01.08",
+      "sex": "メス",
+      "motherId": "1354357024",
+      "breed": "黒毛和種",
+      "importDate": null,
+      "importCountry": null
+    },
+    "history": [
+      {
+        "event": "出生",
+        "date": "2023.01.08",
+        "prefecture": "秋田県",
+        "city": "横手市",
+        "name": "（農）ビクトリーファーム　夏美沢農場"
+      },
+      ...
+    ]
   }
-  ```
+}
+```
 
-## 実装のポイント
+## ☁️ デプロイ (Supabase Edge Functions)
 
-- **セッション維持**: NLBCサイトの仕様に合わせ、同意ページから検索ページまでのセッション（Cookie）とCSRFトークンを適切に管理しています。
-- **バリデーション**: 入力されたIDが9桁または10桁の数字であることを確認し、必要に応じて0埋めを行います。
-- **パース処理**: `cheerio` を使用してHTMLから牛の基本情報と異動履歴を正確に抽出します。
+Supabase CLIを使用して、以下のコマンドでデプロイできます。
+
+```bash
+supabase functions deploy cattle-search --no-verify-jwt
+```
+
+## 📂 ディレクトリ構造
+
+- `supabase/functions/cattle-search/index.ts`: Supabase Edge Functions 用のメインロジック
+- `local_server.js`: Node.js/Express を使用したローカル開発用サーバー
+- `test_node.js`: CLIから動作確認するためのスクリプト
+- `docs/design.md`: 要件定義・基本設計書
+
+## ⚖️ ライセンス
+
+MIT License
+
+## ⚠️ 免責事項
+
+本ツールは家畜改良センター（NLBC）の公開情報を取得するものですが、NLBCの利用規約を遵守して使用してください。過度なリクエスト送信は控え、自己責任で利用してください。
